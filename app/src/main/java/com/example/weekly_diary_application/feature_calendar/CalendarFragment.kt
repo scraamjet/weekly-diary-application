@@ -13,6 +13,7 @@ import com.example.weekly_diary_application.common.Application
 import com.example.weekly_diary_application.R
 import com.example.weekly_diary_application.data.TaskEntity
 import com.example.weekly_diary_application.databinding.FragmentCalendarBinding
+import java.time.Instant
 import java.util.*
 
 
@@ -28,8 +29,10 @@ class CalendarFragment: Fragment() {
     private lateinit var bundle:Bundle
     private var hoursTaskMap =  mutableMapOf<Int, TaskEntity>()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onResume() {
+        super.onResume()
+        val time = Calendar.getInstance(TimeZone.getDefault())
+        changeDate(time.get(Calendar.YEAR),time.get(Calendar.MONTH),time.get(Calendar.DAY_OF_MONTH))
     }
 
     override fun onCreateView(
@@ -47,23 +50,25 @@ class CalendarFragment: Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-viewModel.tasksList.observe(viewLifecycleOwner, Observer {
+        viewModel.tasksList.observe(viewLifecycleOwner) {
             onTaskListUpd(it)
-        })
+        }
         binding.calendarView
             .setOnDateChangeListener { _, year, month, dayOfMonth ->
-                val calendar = Calendar.getInstance()
-                calendar.set(Calendar.YEAR, year)
-                calendar.set(Calendar.MONTH, month)
-                calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
-                viewModel.getDateTasks(calendar.timeInMillis)
-
-                val Date = (dayOfMonth.toString() + "-"
-                    + (month + 1) + "-" + year)
-                binding.idTVDate.text = Date
+               changeDate(year, month, dayOfMonth)
             }
 
+    }
+    private fun changeDate( year: Int, month: Int, dayOfMonth: Int){
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.YEAR, year)
+        calendar.set(Calendar.MONTH, month)
+        calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+        viewModel.getDateTasks(calendar.timeInMillis)
 
+        val date = (dayOfMonth.toString() + "-"
+            + (month + 1) + "-" + year)
+        binding.idTVDate.text = date
     }
     private fun onTaskListUpd(tasks: List<TaskEntity>){
         context?.let { it ->
@@ -76,7 +81,7 @@ viewModel.tasksList.observe(viewLifecycleOwner, Observer {
             }
             val times = resources.getStringArray(R.array.base_time)
             hoursTaskMap.forEach {
-                times[it.key] = it.value.name +it.value.date_start
+                times[it.key] = it.value.name + " " +Instant.ofEpochSecond(it.value.date_start)
             }
             val adapter =
                 ArrayAdapter(it, R.layout.task_item, R.id.task_time,times)
